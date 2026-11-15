@@ -367,11 +367,15 @@ abstract class BaseAccessibilityServiceController(
     private var holdScheduled = false
 
     private val toggleHoldRunnable = Runnable {
-        if (isPaused.value) {
-            pauseKeyMapsUseCase.resume()
-        } else {
+        val willPause = !isPaused.value
+
+        if (willPause) {
             pauseKeyMapsUseCase.pause()
+        } else {
+            pauseKeyMapsUseCase.resume()
         }
+
+        GlitchEffect.show(service, willPause) { }
     }
 
     private fun trackVolumeHold(event: KMKeyEvent) {
