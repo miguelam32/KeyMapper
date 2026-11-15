@@ -71,7 +71,9 @@ object GlitchEffect {
         val windowManager = service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         // Azul = pausado (apagado), verde = activo (prendido)
         val tint = if (paused) 0xFF1E88FF.toInt() else 0xFF00E676.toInt()
-        val view = GlitchView(service, bitmap, tint)
+        val view = GlitchView(service)
+        view.bitmap = bitmap
+        view.setTint(tint)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -112,11 +114,9 @@ object GlitchEffect {
         }
     }
 
-    private class GlitchView(
-        context: Context,
-        private val bitmap: Bitmap,
-        tint: Int,
-    ) : View(context) {
+    private class GlitchView(context: Context) : View(context) {
+        var bitmap: Bitmap? = null
+        var tintFilter: ColorMatrixColorFilter? = null
         var progress = 0f
 
         private val rnd = Random(System.nanoTime())
@@ -127,11 +127,14 @@ object GlitchEffect {
         }
         private val src = Rect()
         private val dst = Rect()
-        private val tintFilter = buildFilter(tint)
         private var lastUpdate = 0L
         private var heights = IntArray(0)
         private var offsets = FloatArray(0)
         private var tinted = true
+
+        fun setTint(tint: Int) {
+            tintFilter = buildFilter(tint)
+        }
 
         private fun buildFilter(tint: Int): ColorMatrixColorFilter {
             val tr = Color.red(tint) / 255f
@@ -169,6 +172,7 @@ object GlitchEffect {
             val w = width
             val h = height
             if (w == 0 || h == 0) return
+            val bitmap = bitmap ?: return
 
             val intensity = kotlin.math.sin(Math.PI * progress).toFloat()
 
