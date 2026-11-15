@@ -3,6 +3,8 @@ package io.github.sds100.keymapper.base.system.accessibility
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.res.Configuration
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityEvent
@@ -359,15 +361,50 @@ abstract class BaseAccessibilityServiceController(
     open fun onConfigurationChanged(newConfig: Configuration) {
     }
 
+    private val holdHandler = Handler(Looper.getMainLooper())
+    private var volUpHeld = false
+    private var volDownHeld = false
+    private var holdScheduled = false
+
+    private val toggleHoldRunnable = Runnable {
+        if (isPaused.value) {
+            pauseKeyMapsUseCase.resume()
+        } else {
+            pauseKeyMapsUseCase.pause()
+        }
+    }
+
+    private fun trackVolumeHold(event: KMKeyEvent) {
+        val isDown = event.action == KeyEvent.ACTION_DOWN
+
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> volUpHeld = isDown
+            KeyEvent.KEYCODE_VOLUME_DOWN -> volDownHeld = isDown
+            else -> return
+        }
+
+        if (volUpHeld && volDownHeld) {
+            if (!holdScheduled) {
+                holdScheduled = true
+                holdHandler.postDelayed(toggleHoldRunnable, 4000L)
+            }
+        } else {
+            holdScheduled = false
+            holdHandler.removeCallbacks(toggleHoldRunnable)
+        }
+    }
+
     fun onKeyEvent(
         event: KMKeyEvent,
         detectionSource: InputEventDetectionSource =
             InputEventDetectionSource.ACCESSIBILITY_SERVICE,
     ): Boolean {
+        trackVolumeHold(event)
         return inputEventHub.onInputEvent(event, detectionSource)
     }
 
     fun onKeyEventFromIme(event: KMKeyEvent): Boolean {
+        trackVolumeHold(event)
         /*
         Issue #850
         If a volume key is sent while the phone is ringing or in a call
