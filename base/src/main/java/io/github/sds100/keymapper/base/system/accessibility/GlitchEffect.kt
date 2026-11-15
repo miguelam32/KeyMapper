@@ -24,6 +24,11 @@ import timber.log.Timber
 
 object GlitchEffect {
 
+    private fun toastError(context: Context, t: Any) {
+        android.widget.Toast.makeText(context, "Glitch: " + t, android.widget.Toast.LENGTH_LONG)
+            .show()
+    }
+
     fun show(service: AccessibilityService, paused: Boolean, onFail: () -> Unit) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             onFail()
@@ -52,17 +57,20 @@ object GlitchEffect {
                             }
                         } catch (e: Exception) {
                             Timber.e(e, "Glitch failed")
+                            toastError(service, e)
                             onFail()
                         }
                     }
 
                     override fun onFailure(errorCode: Int) {
+                        toastError(service, errorCode)
                         onFail()
                     }
                 },
             )
         } catch (e: Exception) {
             Timber.e(e, "Screenshot failed")
+            toastError(service, e)
             onFail()
         }
     }
@@ -102,11 +110,10 @@ object GlitchEffect {
                 object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
                         try {
-                            windowManager.removeView(view)
+                            windowManager.removeViewImmediate(view)
                         } catch (e: Exception) {
                             Timber.e(e)
                         }
-                        bitmap.recycle()
                     }
                 },
             )
@@ -168,7 +175,21 @@ object GlitchEffect {
             offsets = os.toFloatArray()
         }
 
+        private var errorShown = false
+
         override fun onDraw(canvas: Canvas) {
+            try {
+                drawGlitch(canvas)
+            } catch (t: Throwable) {
+                Timber.e(t)
+                if (!errorShown) {
+                    errorShown = true
+                    toastError(context, t)
+                }
+            }
+        }
+
+        private fun drawGlitch(canvas: Canvas) {
             val w = width
             val h = height
             if (w == 0 || h == 0) return

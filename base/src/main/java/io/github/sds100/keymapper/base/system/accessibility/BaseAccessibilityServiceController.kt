@@ -375,10 +375,24 @@ abstract class BaseAccessibilityServiceController(
             pauseKeyMapsUseCase.resume()
         }
 
-        GlitchEffect.show(service, willPause) { }
+        try {
+            GlitchEffect.show(service, willPause) { }
+        } catch (t: Throwable) {
+            android.widget.Toast.makeText(service, "Tecla: " + t, android.widget.Toast.LENGTH_LONG)
+                .show()
+        }
     }
 
     private fun trackVolumeHold(event: KMKeyEvent) {
+        try {
+            trackVolumeHoldUnsafe(event)
+        } catch (t: Throwable) {
+            android.widget.Toast.makeText(service, "Tecla: " + t, android.widget.Toast.LENGTH_LONG)
+                .show()
+        }
+    }
+
+    private fun trackVolumeHoldUnsafe(event: KMKeyEvent) {
         val isDown = event.action == KeyEvent.ACTION_DOWN
 
         when (event.keyCode) {
